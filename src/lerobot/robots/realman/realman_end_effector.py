@@ -47,11 +47,13 @@ class RealmanEndEffector(Realman):
                                          [self.standardization.input_transform(config.init_ee_state)], 
                                          'ee_absolute') \
                           if config.visualize else None
+        self.visualizer = None
     
     @property
     def action_features(self) -> dict[str, Any]:
         return {
-            each: float for each in ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'gripper']
+            # each: float for each in ['x', 'y', 'z', 'roll', 'pitch', 'yaw', 'gripper']
+            each: float for each in ['delta_x', 'delta_y', 'delta_z', 'delta_rx', 'delta_ry', 'delta_rz', 'gripper']
         }
     
     def connect(self):
@@ -61,7 +63,7 @@ class RealmanEndEffector(Realman):
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
-
+    
         state = self._get_ee_state() if self._delta_with_previous else copy.deepcopy(self._base_state)
         state = self.standardization.input_transform(state)
 

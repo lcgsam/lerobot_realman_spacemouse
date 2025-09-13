@@ -7,7 +7,7 @@ from lerobot.errors import DeviceNotConnectedError
 from lerobot.robots.robot import Robot
 
 from .configuration_realman import RealmanConfig
-
+from .gripper_test import GripperController
 
 class Realman(Robot):
     """
@@ -51,7 +51,7 @@ class Realman(Robot):
         super().__init__(config)
 
         self.arm = RoboticArm(rm_thread_mode_e.RM_TRIPLE_MODE_E)
-
+        self.gripper = GripperController(port='/dev/ttyACM0')
         self.config = config
         self.cameras = make_cameras_from_configs(config.cameras)
     
@@ -59,7 +59,7 @@ class Realman(Robot):
     def _motors_ft(self) -> dict[str, type]:
         return {
             f'{each}_pos': float for each in [
-                'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7', 'gripper'
+                'joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'gripper'
             ]
         }
 
@@ -85,12 +85,19 @@ class Realman(Robot):
     
     def connect(self):
         self.handle = self.arm.rm_create_robot_arm(self.config.ip, self.config.port)
+        if self.handle.id == -1:
+            print("\nFailed to connect to the robot arm\n")
+            exit(1)
+        else:
+            print(f"\nSuccessfully connected to the robot arm: {self.handle.id}\n")
         self.arm.rm_set_arm_run_mode(1)
 
         if self.config.init_type == 'joint':
-            self._set_joint_state(self.config.init_state)
+            # self._set_joint_state(self.config.init_state)
+            n = 1
         elif self.config.init_type == 'end_effector':
-            self._set_ee_state(self.config.init_state)
+            # self._set_ee_state(self.config.init_state)
+            n = 1
         else:
             raise ValueError(f"Unknown init_state_type: {self.config.init_state_type}")
         time.sleep(1)
@@ -109,10 +116,13 @@ class Realman(Robot):
     
     def _set_joint_state(self, state: list[int]):
         print(state)
-        success = self.arm.rm_movej(state[:-1], v=100, r=0, connect=0, block=self.config.block)
+        # success = self.arm.rm_movej(state[:-1], v=100, r=0, connect=0, block=self.config.block)
+        success = self.arm.rm_movej_canfd(state[:-1], False, 0, 0, 50)
         if success != 0:
             raise RuntimeError(f'Failed movej')
-        success = self.arm.rm_set_gripper_position(int(state[-1]), block=self.config.block, timeout=3)
+        # success = self.arm.rm_set_gripper_position(int(state[-1]), block=self.config.block, timeout=3)
+        self.gripper_relative(self.gripper, 'open' if state[-1]  else 'close', 400)
+
         if success != 0:
             raise RuntimeError('Failed set gripper')
     
@@ -143,7 +153,8 @@ class Realman(Robot):
         ))
         if ret_code != 0:
             print('IK error:', ret_code)
-        self._set_joint_state(joint + [state[-1]])
+        else:
+            self._set_joint_state(joint + [state[-1]])
 
     def _get_ee_state(self) -> list[int]:
         # WARN: rm_get_current_arm_state not working in Realman API
@@ -163,7 +174,6 @@ class Realman(Robot):
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
-        
         self._set_joint_state([action[each] for each in self._motors_ft.keys()])
         state = self._get_joint_state()
         return {k: v for k, v in zip(self._motors_ft.keys(), state)}
@@ -187,3 +197,9 @@ class Realman(Robot):
             print("Realman robot disconnected.")
         else:
             raise RuntimeError("Failed to disconnect realman robot.")
+    
+    def gripper_relative(self, gripper, mode, dg):
+        if mode == 'close':
+            gripper.close_gripper(close_angle=dg)
+        elif mode == 'open':
+            gripper.open_gripper(open_angle=dg)

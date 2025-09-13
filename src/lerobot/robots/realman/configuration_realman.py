@@ -45,7 +45,7 @@ class RealmanEndEffectorConfig(RealmanConfig):
         visualize: Whether to visualize the robot's observations and actions.
     """
     
-    control_mode: str = 'ee_absolute'
+    control_mode: str = 'ee_delta_base'
     delta_with_previous: bool = True
     base_euler: list[float] = field(default_factory=lambda: [0.0, 0.5 * np.pi, 0.0])
     visualize: bool = True

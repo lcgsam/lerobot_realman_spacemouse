@@ -63,7 +63,11 @@ def make_teleoperator_from_config(config: TeleoperatorConfig) -> Teleoperator:
         return HomunculusArm(config)
     elif config.type == "bi_so100_leader":
         from .bi_so100_leader import BiSO100Leader
-
+        
         return BiSO100Leader(config)
+    elif config.type == "spacemouse":
+        from .spacemouse.spacemouse_teleop import SpacemouseTeleop
+
+        return SpacemouseTeleop(config)
     else:
         raise ValueError(config.type)
