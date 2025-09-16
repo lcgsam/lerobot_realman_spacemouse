@@ -166,19 +166,25 @@ class SpacemouseTeleop(Teleoperator):
             tmp = translation[0]
             translation[0] = translation[1]
             translation[1] = tmp
-            if not self.spacemouse_controller.is_button_pressed(1):
-                # translation mode
-                translation[1] = 0
+            # 高度
+            # if not self.spacemouse_controller.is_button_pressed(1):
+            #     # translation mode
+            #     translation[1] = 0
             
             rotation = sm_state[3:] * self.config.rotation_scale
+            tmp_r0 = rotation[0]
+            tmp_r1 = rotation[1]
+            tmp_r2 = rotation[2]
+            rotation[0] = -tmp_r2
+            rotation[1] = -tmp_r0
+            rotation[2] = tmp_r1
+            # rotation[2:] = 0
             if not self.spacemouse_controller.is_button_pressed(0):
                 # translation mode
                 rotation[:] = 0
             else:
                 translation[:] = 0
-            if not self.spacemouse_controller.is_button_pressed(1):
-                # 2D translation mode
-                translation[1] = 0    
+
             # Create action dictionary
             action_dict = {
                 "delta_x": float(translation[0]),
@@ -190,13 +196,26 @@ class SpacemouseTeleop(Teleoperator):
             }
 
             # Add gripper control if enabled
-            if self.config.use_gripper:
-                # Button 0 = close, Button 1 = open
-                button_0 = int(self.spacemouse_controller.is_button_pressed(0))
-                button_1 = int(self.spacemouse_controller.is_button_pressed(1))
-                gripper_delta = (button_0 - button_1) * \
-                    self.config.move_increment
-                action_dict["gripper"] = float(gripper_delta)
+            # if self.config.use_gripper:
+            #     # Button 0 = close, Button 1 = open
+            #     button_0 = int(self.spacemouse_controller.is_button_pressed(0))
+            #     button_1 = int(self.spacemouse_controller.is_button_pressed(1))
+            #     gripper_delta = (button_0 - button_1) * \
+            #         self.config.move_increment
+            #     action_dict["gripper"] = float(gripper_delta)
+            if not hasattr(self, 'gripper_state'):
+                self.gripper_state = 1  # 0表示闭合，1表示打开
+            
+            # 检测按钮1是否被按下
+            button_1_pressed = self.spacemouse_controller.is_button_pressed(1)
+            
+            # 当按钮1被按下时切换夹爪状态
+            if button_1_pressed:
+                # 切换状态：0变1，1变0
+                self.gripper_state = 1 - self.gripper_state
+            
+            # 将夹爪状态放入动作字典
+            action_dict["gripper"] = float(self.gripper_state)
 
             return action_dict
 

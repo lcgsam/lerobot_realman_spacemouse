@@ -43,11 +43,12 @@ class RealmanEndEffector(Realman):
 
         self.standardization = get_standardization(self.name)
         self.transform = get_transform(config.control_mode, config.base_euler)
-        self.visualizer = get_visualizer(list(self._cameras_ft.keys()), ['arm'], 
-                                         [self.standardization.input_transform(config.init_ee_state)], 
-                                         'ee_absolute') \
-                          if config.visualize else None
+        # self.visualizer = get_visualizer(list(self._cameras_ft.keys()), ['arm'], 
+        #                                  [self.standardization.input_transform(config.init_ee_state)], 
+        #                                  'ee_absolute') \
+        #                   if config.visualize else None
         self.visualizer = None
+        self.end_effector_bounds = config.end_effector_bounds
     
     @property
     def action_features(self) -> dict[str, Any]:
@@ -70,7 +71,7 @@ class RealmanEndEffector(Realman):
         action = [action[key] for key in self.action_features.keys()]
         action = self.transform(state, action)
         action = self.standardization.output_transform(action)
-
+        
         self._set_ee_state(action)
 
         if self.visualizer:

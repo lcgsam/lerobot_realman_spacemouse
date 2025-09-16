@@ -52,8 +52,10 @@ class Realman(Robot):
 
         self.arm = RoboticArm(rm_thread_mode_e.RM_TRIPLE_MODE_E)
         self.gripper = GripperController(port='/dev/ttyACM0')
+        self.gripper.connect()
         self.config = config
         self.cameras = make_cameras_from_configs(config.cameras)
+        self.last_gripper = 1
     
     @property
     def _motors_ft(self) -> dict[str, type]:
@@ -121,8 +123,12 @@ class Realman(Robot):
         if success != 0:
             raise RuntimeError(f'Failed movej')
         # success = self.arm.rm_set_gripper_position(int(state[-1]), block=self.config.block, timeout=3)
-        self.gripper_relative(self.gripper, 'open' if state[-1]  else 'close', 400)
 
+        if state[-1] == 1 and self.last_gripper == 0:
+            self.gripper_relative(self.gripper, 'open', 400)
+        elif state[-1] == 0 and self.last_gripper == 1:
+            self.gripper_relative(self.gripper, 'close', 400)
+        self.last_gripper = state[-1]
         if success != 0:
             raise RuntimeError('Failed set gripper')
     

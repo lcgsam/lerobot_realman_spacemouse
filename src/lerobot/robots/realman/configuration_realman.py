@@ -49,3 +49,9 @@ class RealmanEndEffectorConfig(RealmanConfig):
     delta_with_previous: bool = True
     base_euler: list[float] = field(default_factory=lambda: [0.0, 0.5 * np.pi, 0.0])
     visualize: bool = True
+    end_effector_bounds: dict[str, list[float]] = field(
+        default_factory=lambda: {
+            "min": [-1.0, -1.0, -1.0],  # min x, y, z
+            "max": [1.0, 1.0, 1.0],  # max x, y, z
+        }
+    )
